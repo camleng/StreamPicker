@@ -1,1 +1,4 @@
 .DS_Store
+.token
+.ropeproject
+__pycache__

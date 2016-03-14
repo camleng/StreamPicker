@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import json
 import os
 import tkinter as tk
@@ -7,15 +9,17 @@ import subprocess
 
 import requests
 from PIL import ImageTk, Image
+import authentication
 
 
 class StreamPicker(tk.Frame):
-    def __init__(self, master):
+    def __init__(self, master, access_token):
         tk.Frame.__init__(self, master=master)
         self.row = 0
         self.column = 0
         self.base_url = 'https://api.twitch.tv/kraken'
-        self.oauth_token = 'zk5z17f88iqq347yn63rpbubtadumd'
+        # self.oauth_token = 'zk5z17f88iqq347yn63rpbubtadumd'
+        self.oauth_token = access_token
         self.frames = []
         self.streams = []
 
@@ -62,7 +66,8 @@ class StreamPicker(tk.Frame):
     def extract_live_streams(self, streams):
         for stream in streams:
             display_name = stream['channel']['display_name']
-            preview_url = stream['preview']['large']
+            preview_url = stream['preview']['medium']
+            print(preview_url)
             viewer_count = stream['viewers']
             response = requests.get(preview_url)
             preview_im = Image.open(BytesIO(response.content))
@@ -115,7 +120,7 @@ class StreamPicker(tk.Frame):
         if int(count) >= 1:  # another instance running -- don't open
             return
 
-        command = 'screen -d -m -S {} livestreamer {} best'.format(channel, url)
+        command = 'screen -d -m -S {} /usr/local/bin/livestreamer {} best'.format(channel, url)
         try:
             os.system(command)
         except Exception as e:
@@ -139,7 +144,9 @@ class StreamPicker(tk.Frame):
         self.set_geometry()
 
     def set_geometry(self):
-        if self.row >= 1 or self.column >= 3:
+        if self.row == 0:
+            width = self.column*295
+        elif self.row >= 1 or self.column >= 3:
             width = 3*295
         elif self.column == 2:
             width = 2*295
@@ -150,8 +157,17 @@ class StreamPicker(tk.Frame):
         root.geometry('{}x{}'.format(width, height))
 
 if __name__ == '__main__':
+    token_file = os.path.dirname(__file__) + '/.token'
+    if os.path.exists(token_file):
+        with open(token_file) as infile:
+            access_token = infile.read()
+    else:
+        access_token = authentication.authenticate_user()
+        with open(token_file, 'w') as outfile:
+            outfile.write(access_token)
+
     root = tk.Tk()
-    app = StreamPicker(root)
+    app = StreamPicker(root, access_token)
     root.title('Stream Picker')
     root.configure(background='gray15')
     root.geometry('+{}+{}'.format(210, 150))
