@@ -3,7 +3,6 @@
 from contextlib import suppress
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-
 class RequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
@@ -12,12 +11,12 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         if '/authorize' in self.path:
             message = """<h2>Authentication successful!</h2>
+                         <p>Stream Picker will now open</p>
                          <p>You may now close this window</p>"""
             self.wfile.write(bytes(message, 'utf8'))
         return
 
 def run():
-    print('running server')
     with suppress(KeyboardInterrupt):
         httpd.serve_forever()
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from threading import Thread
-import sys
 
 import server
 from selenium import webdriver
@@ -12,12 +11,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 
 def authenticate_user():
-    url = 'https://api.twitch.tv/kraken/oauth2/authorize?response_type=token&client_id=op8q0n0el0sc3wfoex530h7p4bz43yi&redirect_uri=http://127.0.0.1:8081/authorize'
+    url = ('https://api.twitch.tv/kraken/oauth2/authorize'
+          '?response_type=token'
+          '&client_id=op8q0n0el0sc3wfoex530h7p4bz43yi'
+          '&redirect_uri=http://127.0.0.1:8081/authorize')
 
     driver = webdriver.Firefox()
 
-    t = Thread(target=server.run)
-    t.start()
+    Thread(target=server.run).start()
 
     driver.get(url)
     wait = WebDriverWait(driver, 2*60)

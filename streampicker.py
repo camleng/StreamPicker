@@ -6,6 +6,7 @@ import tkinter as tk
 from io import BytesIO
 from tkinter import simpledialog, messagebox
 import subprocess
+import sys
 
 import requests
 from PIL import ImageTk, Image
@@ -18,7 +19,6 @@ class StreamPicker(tk.Frame):
         self.row = 0
         self.column = 0
         self.base_url = 'https://api.twitch.tv/kraken'
-        # self.oauth_token = 'zk5z17f88iqq347yn63rpbubtadumd'
         self.oauth_token = access_token
         self.frames = []
         self.streams = []
@@ -32,6 +32,19 @@ class StreamPicker(tk.Frame):
         self.manage_streams()
 
         self.set_geometry()
+
+    def build_popup_menu(self, channel):
+        popup = tk.Menu(root, tearoff=0)
+        popup.add_command(label='source', command=lambda: self.open_stream(channel, 'source'))
+        popup.add_command(label='high', command=lambda: self.open_stream(channel, 'high'))
+        popup.add_command(label='medium', command=lambda: self.open_stream(channel, 'medium'))
+        popup.add_command(label='low', command=lambda: self.open_stream(channel, 'low'))
+        popup.add_command(label='mobile', command=lambda: self.open_stream(channel, 'mobile'))
+
+        return popup
+
+    def do_popup(self, popup, event):
+        popup.tk_popup(event.x_root, event.y_root, 0)
 
     def create_menus(self):
         menubar = tk.Menu(self.master)
@@ -49,16 +62,15 @@ class StreamPicker(tk.Frame):
         menubar.add_cascade(label='Actions', menu=action_menu)
 
     def manage_streams(self):
-        live_streams = self.get_live_streams()
-
+        live_streams = self.get_live_streams()['streams']
         if live_streams:
-            streams = live_streams['streams']
-            self.extract_live_streams(streams)
+            self.extract_live_streams(live_streams)
         else:
             tk.Label(root, text='No streams available').pack()
 
     def get_live_streams(self):
-        r = requests.get('{}/streams/followed?oauth_token={}'.format(self.base_url, self.oauth_token))
+        url = '{}/streams/followed?oauth_token={}'.format(self.base_url, self.oauth_token)
+        r = requests.get(url)
         live_streams = json.loads(r.text)
 
         return live_streams
@@ -67,8 +79,10 @@ class StreamPicker(tk.Frame):
         for stream in streams:
             display_name = stream['channel']['display_name']
             preview_url = stream['preview']['medium']
-            print(preview_url)
             viewer_count = stream['viewers']
+            partner = stream['channel']['partner']
+            title = stream['channel']['status']
+
             response = requests.get(preview_url)
             preview_im = Image.open(BytesIO(response.content))
             preview_im.thumbnail((250, 260))
@@ -78,10 +92,10 @@ class StreamPicker(tk.Frame):
             if self.column >= 3:
                 self.column = 0
                 self.row += 1
-            self.display_stream_option(display_name, viewer_count, preview_img)
+            self.display_stream_option(display_name, viewer_count, preview_img, title, partner=partner)
             self.column += 1
 
-    def display_stream_option(self, channel, viewers, img):
+    def display_stream_option(self, channel, viewers, img, title, partner=False):
         """Add stream to grid
         :param channel
         :param viewers
@@ -91,9 +105,14 @@ class StreamPicker(tk.Frame):
         self.frames.append(stream_frame)
         stream_frame.configure(background='gray15')
 
-        thumbnail = tk.Label(stream_frame, image=img, cursor='pointinghand')
+        cursor = 'pointinghand' if sys.platform=='darwin' else 'hand2'
+        thumbnail = tk.Label(stream_frame, image=img, cursor=cursor)
         thumbnail.image = img
         thumbnail.bind('<Button-1>', lambda e: self.open_stream(channel))
+        CreateToolTip(thumbnail, text=title)
+        if partner:
+            popup = self.build_popup_menu(channel)
+            thumbnail.bind('<Button-2>', lambda e: self.do_popup(popup, e))
 
         channel_label = tk.Label(stream_frame, text=channel, fg='bisque', bg='gray15')
         viewer_label = tk.Label(stream_frame, text=viewers, image=self.viewer_img, compound=tk.LEFT,
@@ -105,7 +124,7 @@ class StreamPicker(tk.Frame):
         stream_frame.grid(row=self.row, column=self.column, padx=20, pady=20)
 
     @staticmethod
-    def open_stream(channel):
+    def open_stream(channel, quality='source'):
         """Open stream in VLC
         :param channel
         """
@@ -116,11 +135,14 @@ class StreamPicker(tk.Frame):
         else:
             url = 'twitch.tv/' + channel
 
-        count = subprocess.check_output('screen -ls | grep {} | wc -l'.format(channel), shell=True)
-        if int(count) >= 1:  # another instance running -- don't open
-            return
+        if sys.platform == 'win32': # Windows
+            command = 'start /B livestreamer {} {}'.format(url, quality)
+        else: # UNIX
+            count = subprocess.check_output('screen -ls | grep {} | wc -l'.format(channel), shell=True)
+            if int(count) >= 1:  # another instance running -- don't open
+                return
+            command = '/usr/local/bin/livestreamer {} {} 2>&1>/dev/null &'.format(url, quality)
 
-        command = 'screen -d -m -S {} /usr/local/bin/livestreamer {} best'.format(channel, url)
         try:
             os.system(command)
         except Exception as e:
@@ -156,6 +178,39 @@ class StreamPicker(tk.Frame):
         height = (self.row+1) * 205
         root.geometry('{}x{}'.format(width, height))
 
+
+class CreateToolTip(object):
+    """
+    create a tooltip for a given widget
+    """
+    def __init__(self, widget, text='widget info'):
+        self.widget = widget
+        self.text = text
+        self.widget.bind('<Enter>', self.enter)
+        self.widget.bind('<Leave>', self.close)
+        self.tw = None
+
+    def enter(self, event=None):
+        x = 0
+        y = 0
+        x, y, cx, cy = self.widget.bbox('insert')
+        x += self.widget.winfo_rootx() + 20
+        y += self.widget.winfo_rooty() + 20
+        # creates a toplevel window
+        self.tw = tk.Toplevel(self.widget)
+        # Leaves only the label and removes the app window
+        self.tw.wm_overrideredirect(True)
+        self.tw.wm_geometry('+{}+{}'.format(x, y))
+        label = tk.Label(self.tw, text=self.text, justify='left',
+                       background='#ffffe6', relief='solid', borderwidth=1,
+                       font=('times', '8', 'normal'))
+        label.pack(ipadx=1)
+
+    def close(self, event=None):
+        if self.tw:
+            self.tw.destroy()
+
+
 if __name__ == '__main__':
     token_file = os.path.dirname(__file__) + '/.token'
     if os.path.exists(token_file):
@@ -171,5 +226,4 @@ if __name__ == '__main__':
     root.title('Stream Picker')
     root.configure(background='gray15')
     root.geometry('+{}+{}'.format(210, 150))
-
     root.mainloop()
