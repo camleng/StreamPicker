@@ -11,10 +11,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 
 def authenticate_user():
-    url = ('https://api.twitch.tv/kraken/oauth2/authorize'
-          '?response_type=token'
-          '&client_id=op8q0n0el0sc3wfoex530h7p4bz43yi'
-          '&redirect_uri=http://127.0.0.1:8081/authorize')
+    url = "https://api.twitch.tv/kraken/oauth2/authorize?response_type=token&client_id=op8q0n0el0sc3wfoex530h7p4bz43yi&redirect_uri=http://localhost:8081&state=58xox58nj8z9w80mgeorni5vm9i4v1z&scope=user_read"
 
     driver = webdriver.Firefox()
 
