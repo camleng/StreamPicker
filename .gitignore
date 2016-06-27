@@ -1,5 +1,7 @@
 .DS_Store
-.token
+.token*
 .ropeproject
 __pycache__
 .idea/*
+env
+changes

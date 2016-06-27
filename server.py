@@ -9,11 +9,10 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-        if '/authorize' in self.path:
-            message = """<h2>Authentication successful!</h2>
-                         <p>Stream Picker will now open</p>
-                         <p>You may now close this window</p>"""
-            self.wfile.write(bytes(message, 'utf8'))
+        message = """<h2>Authentication successful!</h2>
+                     <p>Stream Picker will now open</p>
+                     <p>You may now close this window</p>"""
+        self.wfile.write(bytes(message, 'utf8'))
         return
 
 def run():

@@ -59,12 +59,10 @@ class StreamPicker(tk.Frame):
 
         # menu for opening a stream in another service (or a service you don't follow on Twitch)
         action_menu.add_cascade(label='Open Stream', menu=open_stream_menu)
-
         action_menu.add_separator()
 
         # menu for watching Twitch Past Broadcasts
         action_menu.add_command(label='Past Broadcast', command=lambda: self.show_open_stream_dialog('Twitch', True))
-
         action_menu.add_separator()
 
         # menu for refreshing the live streams
