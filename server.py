@@ -4,8 +4,10 @@ from contextlib import suppress
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 class RequestHandler(BaseHTTPRequestHandler):
-
     def do_GET(self):
+        """Handles GET requests
+        This page is shown if the user's authentication is successful
+        """
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
@@ -16,10 +18,14 @@ class RequestHandler(BaseHTTPRequestHandler):
         return
 
 def run():
+    """Runs the server indefinitely
+    """
     with suppress(KeyboardInterrupt):
         httpd.serve_forever()
 
 def stop():
+    """Shuts down the server
+    """
     httpd.shutdown()
 
 

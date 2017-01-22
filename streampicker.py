@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import json
 import os
 import tkinter as tk
@@ -36,7 +34,7 @@ class StreamPicker(tk.Frame):
 
     def build_popup_menu(self, url):
         popup = tk.Menu(root, tearoff=0)
-        for quality in ['best', 'high', 'medium', 'low', 'mobile']:
+        for quality in ['best', 'high', 'medium', 'low', 'mobile', 'audio']:
             popup.add_command(label=quality, command=lambda quality=quality: self.open_stream(url, quality))
 
         return popup
@@ -79,8 +77,9 @@ class StreamPicker(tk.Frame):
             tk.Label(root, text='No streams available').pack()
 
     def get_live_streams(self):
-        url = '{}/streams/followed?oauth_token={}'.format(self.base_url, self.oauth_token)
-        r = requests.get(url)
+        url = f'{self.base_url}/streams/followed'
+        headers = {'Authorization': f'OAuth {self.oauth_token}'}
+        r = requests.get(url, headers=headers)
         live_streams = json.loads(r.text)
 
         return live_streams
@@ -144,16 +143,16 @@ class StreamPicker(tk.Frame):
         :param past_broadcast
         """
         if sys.platform == 'win32':  # Windows
-            command = 'start /B livestreamer {} {}'.format(url, quality)
+            command = f'start /B livestreamer {url} {quality}'
         else:  # UNIX
-            instances = subprocess.check_output('screen -ls | grep {} | wc -l'.format(url), shell=True)
+            instances = subprocess.check_output(f'screen -ls | grep {url} | wc -l', shell=True)
             if int(instances) >= 1:  # don't open another instance
                 return
 
             if past_broadcast:
-                command = '/usr/local/bin/livestreamer {} {} --player-passthrough hls 2>&1/dev/null &'.format(url, quality)
+                command = f'/usr/local/bin/livestreamer {url} {quality} --player-passthrough hls 2>&1/dev/null &'
             else:
-                command = '/usr/local/bin/livestreamer {} {} 2>&1>/dev/null &'.format(url, quality)
+                command = f'/usr/local/bin/livestreamer {url} {quality} --http-header Client-ID=jzkbprff40iqj646a697cyrvl0zt2m6 2>&1>/dev/null &'
 
 
         try:
@@ -232,22 +231,22 @@ class CreateToolTip(object):
 
 if __name__ == '__main__':
     # file that contains the access token used for making authenticated calls
-    token_file = os.path.dirname(__file__) + '/.token'
+    token_file = os.path.join(os.path.dirname(__file__), '.token')
 
     # read the token file
     if os.path.exists(token_file):
-        with open(token_file) as infile:
-            access_token = infile.read().strip()
+        with open(token_file) as f:
+            access_token = f.read().strip()
 
     # if it's not there, get a new one and save it
     else:
         access_token = authentication.authenticate_user()
-        with open(token_file, 'w') as outfile:
-            outfile.write(access_token)
+        with open(token_file, 'w') as f:
+            f.write(access_token)
 
     root = tk.Tk()
     app = StreamPicker(root, access_token)
     root.title('Stream Picker')
     root.configure(background='gray15')
-    root.geometry('+{}+{}'.format(210, 150))
+    root.geometry('+210+150')
     root.mainloop()
