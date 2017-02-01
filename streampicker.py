@@ -5,6 +5,7 @@ from io import BytesIO
 from tkinter import simpledialog, messagebox
 import subprocess
 import sys
+import re
 
 import requests
 from PIL import ImageTk, Image
@@ -32,6 +33,7 @@ class StreamPicker(tk.Frame):
 
         self.set_geometry()
 
+
     def build_popup_menu(self, url):
         popup = tk.Menu(root, tearoff=0)
         for quality in ['best', 'high', 'medium', 'low', 'mobile', 'audio']:
@@ -39,8 +41,10 @@ class StreamPicker(tk.Frame):
 
         return popup
 
+
     def do_popup(self, popup, event):
         popup.tk_popup(event.x_root, event.y_root, 0)
+
 
     def create_menus(self):
         """Creates the menu bar and the associated menus
@@ -69,12 +73,14 @@ class StreamPicker(tk.Frame):
         # adds the menu to the menubar
         menubar.add_cascade(label='Actions', menu=action_menu)
 
+
     def manage_streams(self):
         live_streams = self.get_live_streams()
         if live_streams:
             self.extract_live_streams(live_streams['streams'])
         else:
             tk.Label(root, text='No streams available').pack()
+
 
     def get_live_streams(self):
         url = f'{self.base_url}/streams/followed'
@@ -83,6 +89,7 @@ class StreamPicker(tk.Frame):
         live_streams = json.loads(r.text)
 
         return live_streams
+
 
     def extract_live_streams(self, streams):
         for stream in streams:
@@ -104,6 +111,7 @@ class StreamPicker(tk.Frame):
                 self.row += 1
             self.display_stream_option(display_name, viewer_count, preview_img, title, url, partner=partner)
             self.column += 1
+
 
     def display_stream_option(self, channel, viewers, img, title, url, partner=False):
         """Add stream to grid
@@ -135,30 +143,31 @@ class StreamPicker(tk.Frame):
         viewer_label.grid(row=1, sticky='E')
         stream_frame.grid(row=self.row, column=self.column, padx=20, pady=20)
 
-    @staticmethod
-    def open_stream(url, quality='best', past_broadcast=False):
+
+    def open_stream(self, url, quality='best', past_broadcast=False):
         """Open stream in VLC
         :param url
         :param quality
         :param past_broadcast
         """
         if sys.platform == 'win32':  # Windows
-            command = f'start /B livestreamer {url} {quality}'
+            command = f'start /B streamlink {url} {quality}'
         else:  # UNIX
             instances = subprocess.check_output(f'screen -ls | grep {url} | wc -l', shell=True)
             if int(instances) >= 1:  # don't open another instance
                 return
 
             if past_broadcast:
-                command = f'/usr/local/bin/livestreamer {url} {quality} --player-passthrough hls 2>&1/dev/null &'
+                command = f'streamlink {url} {quality} --player-passthrough hls 2>&1>/dev/null &'
             else:
-                command = f'/usr/local/bin/livestreamer {url} {quality} --http-header Client-ID=jzkbprff40iqj646a697cyrvl0zt2m6 2>&1>/dev/null &'
-
+                # Client-ID is livestreamer's Client-ID
+                command = f'streamlink {url} {quality} --http-header Client-ID=jzkbprff40iqj646a697cyrvl0zt2m6 2>&1>/dev/null &'
 
         try:
             os.system(command)
         except Exception as e:
             messagebox.showinfo('StreamPicker', e)
+
 
     def show_open_stream_dialog(self, service, past_broadcast=False):
         """Shows the dialog for opening streams in other services (or a past broadcast)
@@ -171,6 +180,7 @@ class StreamPicker(tk.Frame):
 
         self.open_stream(url, 'best', past_broadcast)
 
+
     def refresh(self):
         for frame in self.frames:
             frame.grid_forget()
@@ -181,6 +191,7 @@ class StreamPicker(tk.Frame):
         self.column = 0
         self.manage_streams()
         self.set_geometry()
+
 
     def set_geometry(self):
         """Sets the height and width based on the number of streams that are live
@@ -208,6 +219,7 @@ class CreateToolTip(object):
         self.widget.bind('<Leave>', self.close)
         self.tw = None
 
+
     def enter(self, event=None):
         x = 0
         y = 0
@@ -223,6 +235,7 @@ class CreateToolTip(object):
                        background='#ffffe6', relief='solid', borderwidth=1,
                        font=('times', '8', 'normal'))
         label.pack(ipadx=1)
+
 
     def close(self, event=None):
         if self.tw:
