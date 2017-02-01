@@ -1,12 +1,6 @@
-blessings==1.6
-curtsies==0.2.11
-greenlet==0.4.11
 olefile==0.44
 Pillow==4.0.0
 pycryptodome==3.4.3
-Pygments==2.2.0
 requests==2.13.0
 selenium==3.0.2
-six==1.10.0
 streamlink==0.3.0
-wcwidth==0.1.7
