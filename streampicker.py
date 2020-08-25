@@ -17,7 +17,7 @@ class StreamPicker(tk.Frame):
         tk.Frame.__init__(self, master=master)
         self.row = 0
         self.column = 0
-        self.base_url = 'https://api.twitch.tv/kraken'
+        self.base_url = 'https://api.twitch.tv/helix'
         self.oauth_token = access_token
         self.frames = []
         self.streams = []
@@ -77,14 +77,14 @@ class StreamPicker(tk.Frame):
     def manage_streams(self):
         live_streams = self.get_live_streams()
         if live_streams:
-            self.extract_live_streams(live_streams['streams'])
+            self.extract_live_streams(live_streams['data'])
         else:
             tk.Label(root, text='No streams available').pack()
 
 
     def get_live_streams(self):
-        url = f'{self.base_url}/streams/followed'
-        headers = {'Authorization': f'OAuth {self.oauth_token}'}
+        url = f'{self.base_url}/streams'
+        headers = {'Authorization': f'Bearer {self.oauth_token}', 'Client-ID': 'op8q0n0el0sc3wfoex530h7p4bz43yi'}
         r = requests.get(url, headers=headers)
         live_streams = json.loads(r.text)
 
@@ -93,14 +93,12 @@ class StreamPicker(tk.Frame):
 
     def extract_live_streams(self, streams):
         for stream in streams:
-            display_name = stream['channel']['display_name']
-            preview_url = stream['preview']['medium']
-            viewer_count = stream['viewers']
-            partner = stream['channel']['partner']
-            title = stream['channel']['status']
-            url = stream['channel']['url']
+            username = stream['user_name']
+            thumbnail_url = stream['thumbnail_url'].replace('{width}', '640').replace('{height}', '480')
+            viewer_count = stream['viewer_count']
+            title = stream['title']
 
-            response = requests.get(preview_url)
+            response = requests.get(thumbnail_url)
             preview_im = Image.open(BytesIO(response.content))
             preview_im.thumbnail((250, 260))
 
@@ -109,19 +107,18 @@ class StreamPicker(tk.Frame):
             if self.column >= 3:
                 self.column = 0
                 self.row += 1
-            self.display_stream_option(display_name, viewer_count, preview_img, title, url, partner=partner)
+            self.display_stream_option(username, viewer_count, preview_img, title)
             self.column += 1
 
 
-    def display_stream_option(self, channel, viewers, img, title, url, partner=False):
+    def display_stream_option(self, username, viewers, img, title):
         """Add stream to grid
-        :param channel
+        :param username
         :param viewers
         :param img
         :param title
-        :param url
-        :param partner
         """
+        url = f'https://twitch.tv/{username}'
         stream_frame = tk.Frame(self.master)
         self.frames.append(stream_frame)
         stream_frame.configure(background='gray15')
@@ -131,11 +128,10 @@ class StreamPicker(tk.Frame):
         thumbnail.image = img
         thumbnail.bind('<Button-1>', lambda e: self.open_stream(url))
         CreateToolTip(thumbnail, text=title)
-        if partner:
-            popup = self.build_popup_menu(url)
-            thumbnail.bind('<Button-2>', lambda e: self.do_popup(popup, e))
+        popup = self.build_popup_menu(url)
+        thumbnail.bind('<Button-2>', lambda e: self.do_popup(popup, e))
 
-        channel_label = tk.Label(stream_frame, text=channel, fg='bisque', bg='gray15')
+        channel_label = tk.Label(stream_frame, text=username, fg='bisque', bg='gray15')
         viewer_label = tk.Label(stream_frame, text=viewers, image=self.viewer_img, compound=tk.LEFT, fg='bisque', bg='gray15')
 
         thumbnail.grid(sticky='N')
@@ -161,7 +157,7 @@ class StreamPicker(tk.Frame):
                 command = f'streamlink {url} {quality} --player-passthrough hls 2>&1>/dev/null &'
             else:
                 # Client-ID is livestreamer's Client-ID
-                command = f'streamlink {url} {quality} --http-header Client-ID=jzkbprff40iqj646a697cyrvl0zt2m6 2>&1>/dev/null &'
+                command = f'streamlink {url} {quality}' #--http-header Client-ID=jzkbprff40iqj646a697cyrvl0zt2m6 2>&1>/dev/null &'
 
         try:
             os.system(command)
