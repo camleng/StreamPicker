@@ -1,6 +1,6 @@
 olefile==0.44
 Pillow==6.2.0
-pycryptodome==3.4.3
+pycryptodome==3.6.6
 requests==2.20.0
 selenium==3.0.2
 streamlink==0.3.0
